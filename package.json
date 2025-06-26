@@ -1,0 +1,25 @@
+{
+  "name": "no-border-radius",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "rollup --config --watch",
+    "build": "rollup --config",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/preset-env": "^7.27.2",
+    "@rollup/plugin-babel": "^6.0.4",
+    "rollup": "^4.44.1",
+    "sharp": "^0.34.2",
+    "snyk": "^1.1297.3"
+  },
+  "devDependencies": {
+    "jest": "^30.0.3"
+  }
+}
