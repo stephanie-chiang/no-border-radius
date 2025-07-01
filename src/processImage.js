@@ -1,11 +1,16 @@
 import sharp from 'sharp';
 import dotenv from "dotenv";
 import * as path from "path";
+import fs from "fs";
 
 dotenv.config();
 
 export function processImage(savedImageInfo) {
     const inputPath = path.resolve(savedImageInfo.destinationFilePath);
+    if (!fs.existsSync) {
+        console.error(`Error: not input file at ${inputPath}`);
+        return;
+    }
     const resolvedPath = inputPath.replace("\\","/");
     sharp(resolvedPath)
     .resize(300, 300, {
@@ -18,7 +23,7 @@ export function processImage(savedImageInfo) {
         )),
         (error, info) => {
             if (error) {
-                console.log(`Error processing image: ${error}`);
+                console.error(`Error processing image: ${error}`);
             }
             else {
                 console.log(`Successfully processed. Image info = ${info}`);

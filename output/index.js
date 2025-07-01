@@ -23,7 +23,6 @@ async function validateInput() {
   const answer = await getUserInput();
   const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg|webp)(\?[^\s]*)?$/i;
   const isMatch = regex.test(answer);
-  console.log("OK =", isMatch, answer);
   return isMatch ? answer : validateInput();
 }
 
@@ -63,7 +62,7 @@ async function saveImage(fetchResponse) {
       };
     }
   } catch (error) {
-    console.log("Error writing occurred", error.message);
+    console.error("Error writing occurred", error.message);
   }
 }
 // implement checks for existing files in destination directory later
@@ -91,12 +90,16 @@ async function saveImage(fetchResponse) {
 dotenv.config();
 function processImage(savedImageInfo) {
   const inputPath = path.resolve(savedImageInfo.destinationFilePath);
+  if (!fs.existsSync) {
+    console.error(`Error: not input file at ${inputPath}`);
+    return;
+  }
   const resolvedPath = inputPath.replace("\\", "/");
   sharp(resolvedPath).resize(300, 300, {
     fit: sharp.fit.fill
   }).toFile(path.join(process.env.IMAGE_OUTPUT_PATH, savedImageInfo.imageName + "_resized" + ".png"), (error, info) => {
     if (error) {
-      console.log(`Error processing image: ${error}`);
+      console.error(`Error processing image: ${error}`);
     } else {
       console.log(`Successfully processed. Image info = ${info}`);
     }

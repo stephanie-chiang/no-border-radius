@@ -25,7 +25,7 @@ export async function saveImage(fetchResponse) {
                 };
         }
     } catch (error) {
-            console.log("Error writing occurred", error.message);
+            console.error("Error writing occurred", error.message);
         }
 }
 // implement checks for existing files in destination directory later

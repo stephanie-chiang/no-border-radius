@@ -21,6 +21,5 @@ export async function validateInput() {
     const answer = await getUserInput();
     const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg|webp)(\?[^\s]*)?$/i;
     const isMatch = regex.test(answer);
-    console.log("OK =", isMatch, answer);
     return isMatch ? answer : validateInput();
 }
