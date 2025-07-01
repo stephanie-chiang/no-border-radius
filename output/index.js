@@ -1,13 +1,9 @@
-import 'url';
-import 'sharp';
+import sharp from 'sharp';
 import readline from 'readline';
-
-console.log("Hello world");
-
-//Get user specified image-url
-//store
-//manipulate
-//store a new copy
+import { fileTypeFromBuffer } from 'file-type';
+import fs from 'fs';
+import * as path from 'path';
+import dotenv from 'dotenv';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -23,15 +19,97 @@ async function getUserInput() {
   const answer = await resolveInput("Input the url of your image: ");
   return answer;
 }
-
-//https://mycomicrelief.wordpress.com/wp-content/uploads/2024/07/calvin-and-hobbes-1-2.jpg
 async function validateInput() {
   const answer = await getUserInput();
-  // const regex = /[(http(s)?):\/\/www{0,3}\.?\w\d@:%._\+~#=]{2,256}\.[\w]{2,6}\b([-\w\d@:%_\+.~#?&\/\/=]*\.jpg|JPG|gif|GIF|png|PNG|avif|AVIF|tiff|TIFF|svg|SVG)/
-  // const regex = /[\w\d\W\D]{2,256}\.(jpg|gif|png|avif|tiff|svg)$/i;
-  const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg)(\?[^\s]*)?$/i;
+  const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg|webp)(\?[^\s]*)?$/i;
   const isMatch = regex.test(answer);
   console.log("OK =", isMatch, answer);
   return isMatch ? answer : validateInput();
 }
-validateInput();
+
+dotenv.config();
+function extractFileName(response) {
+  const imageUrl = response.url;
+  const regex = /\/([\w\d]+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
+  const matches = imageUrl.match(regex);
+  return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
+}
+function buildImageFileName(imageName, fileType) {
+  const outputFileName = `${imageName}.${fileType.ext}`;
+  const destinationFilePath = path.join(process.env.IMAGE_INPUT_PATH, outputFileName);
+  return destinationFilePath;
+}
+
+async function fetchImage(imageUrl) {
+  const response = await fetch(imageUrl);
+  if (response.status != 200) {
+    throw new Error(`Problem fetching image: ${error}`);
+  }
+  return response;
+}
+async function saveImage(fetchResponse) {
+  const arrayBuffer = await fetchResponse.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const fileType = await fileTypeFromBuffer(buffer);
+  try {
+    if (fileType.ext) {
+      const imageName = extractFileName(fetchResponse);
+      const destinationFilePath = buildImageFileName(imageName, fileType);
+      fs.createWriteStream(destinationFilePath).write(buffer);
+      console.log(`Success! Your ${fileType.ext} image is now copied to ${destinationFilePath}`);
+      return {
+        "imageName": imageName,
+        "destinationFilePath": destinationFilePath
+      };
+    }
+  } catch (error) {
+    console.log("Error writing occurred", error.message);
+  }
+}
+// implement checks for existing files in destination directory later
+// async function nameSavedFile(fileType) {
+//     const existingFilesArray = fs.readdir(
+//         process.env.IMAGE_INPUT_PATH, (error, files) => {
+//         try {
+//             console.log("\nFiles in imageInput dir");
+//             files.forEach((file) => {
+//                 console.log(file);
+//                 existingFilesArray.append(file);
+//             })
+//         } catch (error) {
+//             console.log(`An error has occurred: ${error}`)
+//         }
+//     }); 
+
+// const destinationFilePath = path.join(process.env.IMAGE_INPUT_PATH, "inputImage", fileType.ext);
+// if (existsSync(destinationFilePath)) {
+//     console.log("This file exists...time to rename!");
+//     const copyNumber = 0;
+//     const newDestinationFilePath = path.join(process.env.IMAGE_INPUT_PATH, outputFileName)
+// }
+
+dotenv.config();
+function processImage(savedImageInfo) {
+  const inputPath = path.resolve(savedImageInfo.destinationFilePath);
+  const resolvedPath = inputPath.replace("\\", "/");
+  sharp(resolvedPath).resize(300, 300, {
+    fit: sharp.fit.fill
+  }).toFile(path.join(process.env.IMAGE_OUTPUT_PATH, savedImageInfo.imageName + "_resized" + ".png"), (error, info) => {
+    if (error) {
+      console.log(`Error processing image: ${error}`);
+    } else {
+      console.log(`Successfully processed. Image info = ${info}`);
+    }
+  });
+}
+
+console.log("Hello world");
+//Get user specified image-url
+//store
+//manipulate
+//store a new copy
+
+const imageUrl = await validateInput();
+const fetchedImage = await fetchImage(imageUrl);
+const savedImageInfo = await saveImage(fetchedImage);
+processImage(savedImageInfo);
