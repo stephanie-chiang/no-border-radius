@@ -1,9 +1,9 @@
-import sharp from 'sharp';
 import readline from 'readline';
-import { fileTypeFromBuffer } from 'file-type';
-import fs from 'fs';
-import * as path from 'path';
+import sharp from 'sharp';
 import dotenv from 'dotenv';
+import * as path from 'path';
+import fs from 'fs';
+import { fileTypeFromBuffer } from 'file-type';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -26,19 +26,6 @@ async function validateInput() {
   return isMatch ? answer : validateInput();
 }
 
-dotenv.config();
-function extractFileName(response) {
-  const imageUrl = response.url;
-  const regex = /\/([\w\d]+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
-  const matches = imageUrl.match(regex);
-  return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
-}
-function buildImageFileName(imageName, fileType) {
-  const outputFileName = `${imageName}.${fileType.ext}`;
-  const destinationFilePath = path.join(process.env.IMAGE_INPUT_PATH, outputFileName);
-  return destinationFilePath;
-}
-
 async function fetchImage(imageUrl) {
   const response = await fetch(imageUrl);
   if (response.status != 200) {
@@ -46,6 +33,19 @@ async function fetchImage(imageUrl) {
   }
   return response;
 }
+
+dotenv.config();
+function extractFileName(response) {
+  const imageUrl = response.url;
+  const regex = /\/([\w\d]+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
+  const matches = imageUrl.match(regex);
+  return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
+}
+function buildImageFileNameAndPath(imageName, fileType) {
+  return path.join(process.env.IMAGE_INPUT_PATH, `${imageName}.${fileType.ext}`);
+}
+
+dotenv.config();
 async function saveImage(fetchResponse) {
   const arrayBuffer = await fetchResponse.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
@@ -53,51 +53,32 @@ async function saveImage(fetchResponse) {
   try {
     if (fileType.ext) {
       const imageName = extractFileName(fetchResponse);
-      const destinationFilePath = buildImageFileName(imageName, fileType);
+      const destinationFilePath = buildImageFileNameAndPath(imageName, fileType);
       fs.createWriteStream(destinationFilePath).write(buffer);
       console.log(`Success! Your ${fileType.ext} image is now copied to ${destinationFilePath}`);
       return {
         "imageName": imageName,
-        "destinationFilePath": destinationFilePath
+        "destinationFilePath": destinationFilePath,
+        "ext": fileType.ext
       };
     }
   } catch (error) {
     console.error("Error writing occurred", error.message);
   }
 }
-// implement checks for existing files in destination directory later
-// async function nameSavedFile(fileType) {
-//     const existingFilesArray = fs.readdir(
-//         process.env.IMAGE_INPUT_PATH, (error, files) => {
-//         try {
-//             console.log("\nFiles in imageInput dir");
-//             files.forEach((file) => {
-//                 console.log(file);
-//                 existingFilesArray.append(file);
-//             })
-//         } catch (error) {
-//             console.log(`An error has occurred: ${error}`)
-//         }
-//     }); 
-
-// const destinationFilePath = path.join(process.env.IMAGE_INPUT_PATH, "inputImage", fileType.ext);
-// if (existsSync(destinationFilePath)) {
-//     console.log("This file exists...time to rename!");
-//     const copyNumber = 0;
-//     const newDestinationFilePath = path.join(process.env.IMAGE_INPUT_PATH, outputFileName)
-// }
-
-dotenv.config();
 function processImage(savedImageInfo) {
-  const inputPath = path.resolve(savedImageInfo.destinationFilePath);
-  if (!fs.existsSync) {
-    console.error(`Error: not input file at ${inputPath}`);
+  if (!fs.existsSync(savedImageInfo.destinationFilePath)) {
+    console.error(`Error: not input file at ${savedImageInfo.destinationFilePath}`);
     return;
   }
-  const resolvedPath = inputPath.replace("\\", "/");
+  console.log("input path", savedImageInfo.destinationFilePath);
+  // const inputPath = path.join(__dirname, process.env.IMAGE_INPUT_PATH, "");
+  const resolvedPath = path.resolve(savedImageInfo.destinationFilePath).replace(/\\/g, "/");
+  console.log("resolved path: ", resolvedPath);
+  // console.log("joined input path = ", inputPath);
   sharp(resolvedPath).resize(300, 300, {
     fit: sharp.fit.fill
-  }).toFile(path.join(process.env.IMAGE_OUTPUT_PATH, savedImageInfo.imageName + "_resized" + ".png"), (error, info) => {
+  }).toFile(path.join(process.env.IMAGE_OUTPUT_PATH, savedImageInfo.imageName + "_resized" + ".jpg"), (error, info) => {
     if (error) {
       console.error(`Error processing image: ${error}`);
     } else {

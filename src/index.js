@@ -1,7 +1,6 @@
-import sharp from 'sharp';
 import { validateInput } from './userInput';
-import { fetchImage, saveImage } from './fetchImage';
-import { processImage } from './processImage';
+import { fetchImage } from './fetchImage';
+import { saveImage, processImage } from './processImage';
 
 console.log("Hello world");
 //Get user specified image-url
