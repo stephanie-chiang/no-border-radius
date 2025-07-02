@@ -31,3 +31,5 @@ export function processImage(savedImageInfo) {
         }
     )
 }
+
+https://blog.logrocket.com/processing-images-sharp-node-js/
