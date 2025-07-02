@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import * as path from "path";
 import fs from "fs";
 import { fileTypeFromBuffer} from "file-type"; 
-import { extractFileName, buildImageFileNameAndPath } from "./processImageHelpers";
+import { extractFileName, buildImageFileName } from "./processImageHelpers";
 
 dotenv.config();
 
@@ -14,7 +14,8 @@ export async function saveImage(fetchResponse) {
     try {
         if (fileType.ext) {
             const imageName = extractFileName(fetchResponse);
-            const destinationFilePath = buildImageFileNameAndPath(imageName, fileType);
+            const destinationFilePath = buildImageFileName(imageName, fileType);
+            console.log("SaveImage - destination file path: ",destinationFilePath);
             fs.createWriteStream(destinationFilePath).write(buffer);
             console.log(`Success! Your ${fileType.ext} image is now copied to ${destinationFilePath}`);
             return {
@@ -25,25 +26,21 @@ export async function saveImage(fetchResponse) {
             console.error("Error writing occurred", error.message);
         }
 }
-
 export function processImage(savedImageInfo) {
-    if (!fs.existsSync(savedImageInfo.destinationFilePath)) {
-        console.error(`Error: not input file at ${savedImageInfo.destinationFilePath}`);
+    const inputPath = path.resolve(savedImageInfo.destinationFilePath);
+    if (!fs.existsSync(inputPath)) {
+        console.error(`Error: no input file at ${inputPath}`);
         return;
     }
-    console.log("input path", savedImageInfo.destinationFilePath);
-    // const inputPath = path.join(__dirname, process.env.IMAGE_INPUT_PATH, "");
-    const resolvedPath = path.resolve(savedImageInfo.destinationFilePath).replace(/\\/g, "/");
-    console.log("resolved path: ", resolvedPath);
-    // console.log("joined input path = ", inputPath);
-    sharp(resolvedPath) 
+    const resolvedPath = inputPath.replaceAll("\\","/");
+    sharp(resolvedPath)
     .resize(300, 300, {
         fit: sharp.fit.fill,
     })
     .toFile(
         (path.join(
             process.env.IMAGE_OUTPUT_PATH,
-            savedImageInfo.imageName + "_resized" + ".jpg"
+            savedImageInfo.imageName + "_resized" + ".png"
         )),
         (error, info) => {
             if (error) {
