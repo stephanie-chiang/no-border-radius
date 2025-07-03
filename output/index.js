@@ -1,9 +1,10 @@
 import readline from 'readline';
+import sharp from 'sharp';
 import dotenv from 'dotenv';
+import * as path from 'path';
+import fsPromises from 'fs/promises';
 import fs from 'fs';
 import { fileTypeFromBuffer } from 'file-type';
-import * as path from 'path';
-import sharp from 'sharp';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -26,31 +27,27 @@ async function validateInput() {
   return isMatch ? answer : validateInput();
 }
 
-dotenv.config();
-function extractFileName(response) {
-  const imageUrl = response.url;
-  const regex = /\/([\w\d]+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
-  const matches = imageUrl.match(regex);
-  return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
-}
-
-// export function buildImageFileNameAndPath(imageName, fileType) {
-//     return path.join(process.env.IMAGE_INPUT_PATH, `${imageName}.${fileType.ext}`);
-// }
-
-function buildImageFileName(imageName, fileType) {
-  const outputFileName = `${imageName}.${fileType.ext}`;
-  const destinationFilePath = path.join(process.env.IMAGE_INPUT_PATH, outputFileName);
-  return destinationFilePath;
-}
-
-dotenv.config();
 async function fetchImage(imageUrl) {
   const response = await fetch(imageUrl);
   if (response.status != 200) {
     throw new Error(`Problem fetching image: ${error}`);
   }
   return response;
+}
+
+function extractFileName(response) {
+  const imageUrl = response.url;
+  const regex = /\/([\w\d]+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
+  const matches = imageUrl.match(regex);
+  return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
+}
+function buildOutputPath(inputPath, outputDirectoryPath) {
+  const {
+    name,
+    ext
+  } = path.parse(inputPath);
+  console.log(path.parse(inputPath));
+  return path.join(outputDirectoryPath, `${name}_resized${ext}`);
 }
 
 dotenv.config();
@@ -61,45 +58,47 @@ async function saveImage(fetchResponse) {
   try {
     if (fileType.ext) {
       const imageName = extractFileName(fetchResponse);
-      const destinationFilePath = buildImageFileName(imageName, fileType);
-      console.log("SaveImage - destination file path: ", destinationFilePath);
-      fs.createWriteStream(destinationFilePath).write(buffer);
+      const outputFileName = `${imageName}.${fileType.ext}`;
+      const destinationFilePath = path.join(process.env.IMAGE_OUTPUT_PATH, outputFileName);
+      await fsPromises.writeFile(destinationFilePath, buffer);
       console.log(`Success! Your ${fileType.ext} image is now copied to ${destinationFilePath}`);
-      return {
-        "imageName": imageName,
-        "destinationFilePath": destinationFilePath,
-        "ext": fileType.ext
-      };
+      return destinationFilePath;
     }
   } catch (error) {
     console.error("Error writing occurred", error.message);
   }
 }
-function processImage(savedImageInfo) {
-  const inputPath = path.resolve(savedImageInfo.destinationFilePath);
+async function processImage(inputPath) {
   if (!fs.existsSync(inputPath)) {
     console.error(`Error: no input file at ${inputPath}`);
     return;
   }
-  const resolvedPath = inputPath.replaceAll("\\", "/");
-  sharp(resolvedPath).resize(300, 300, {
-    fit: sharp.fit.fill
-  }).toFile(path.join(process.env.IMAGE_OUTPUT_PATH, savedImageInfo.imageName + "_resized" + ".png"), (error, info) => {
+  inputPath.replaceAll("\\", "/");
+  const outputPath = buildOutputPath(inputPath, process.env.IMAGE_OUTPUT_PATH);
+  console.log(`New output path is: ${outputPath}`);
+  const image = sharp(inputPath);
+  const {
+    width,
+    height
+  } = await image.metadata();
+  image.resize(Math.round(width / 2), Math.round(height / 2), {
+    fit: sharp.fit.contain
+  }).toFile(outputPath, (error, info) => {
     if (error) {
       console.error(`Error processing image: ${error}`);
     } else {
-      console.log(`Successfully processed. Image info = ${info}`);
+      console.log(`Successfully processed. Image info = ${info.format}, 
+                width ${info.width}, heigh ${info.height}`);
     }
   });
 }
 
 console.log("Hello world");
-//Get user specified image-url
-//store
-//manipulate
-//store a new copy
-
 const imageUrl = await validateInput();
 const fetchedImage = await fetchImage(imageUrl);
-const savedImageInfo = await saveImage(fetchedImage);
-processImage(savedImageInfo);
+const inputImagePath = await saveImage(fetchedImage);
+if (inputImagePath) {
+  await processImage(inputImagePath);
+} else {
+  console.log("No image data saved.");
+}
