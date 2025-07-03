@@ -73,7 +73,6 @@ async function processImage(inputPath) {
     console.error(`Error: no input file at ${inputPath}`);
     return;
   }
-  inputPath.replaceAll("\\", "/");
   const outputPath = buildOutputPath(inputPath, process.env.IMAGE_OUTPUT_PATH);
   console.log(`New output path is: ${outputPath}`);
   const image = sharp(inputPath);

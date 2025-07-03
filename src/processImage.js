@@ -33,7 +33,6 @@ export async function processImage(inputPath) {
         console.error(`Error: no input file at ${inputPath}`);
         return;
     }
-    const resolvedPath = inputPath.replaceAll("\\","/");
 
     const outputPath = buildOutputPath(inputPath, process.env.IMAGE_OUTPUT_PATH);
     console.log(`New output path is: ${outputPath}`);
