@@ -1,4 +1,7 @@
-**Set up**
+# Libraries and package management exercise
+
+## Set up
+
 Run `npm install` to get all the dependencies. 
 
 Create a `.env` file based on the `.env.template`.
