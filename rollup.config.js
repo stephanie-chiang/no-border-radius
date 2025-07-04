@@ -6,7 +6,7 @@ const config = {
     dir: 'output',
     format: 'esm'
   },
-  external: ['sharp'], //check if this is needed to exclude it https://github.com/rollup/rollup/issues/1256
+  external: ['sharp'],
   plugins: [
     babel({ babelHelpers: 'bundled' })]
 };

@@ -2,7 +2,7 @@ import * as path from "path";
 
 export function extractFileName(response) {
     const imageUrl = response.url;
-    const regex = /\/([\w\d]+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
+    const regex = /\/([\w\d\-_']+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
     const matches = imageUrl.match(regex)
     return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
 }

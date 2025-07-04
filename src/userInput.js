@@ -17,9 +17,14 @@ async function getUserInput() {
     return answer;
 }
 
-export async function validateInput() {
+export async function getAndValidateInput() {
     const answer = await getUserInput();
-    const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg|webp)(\?[^\s]*)?$/i;
+    const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg|webp)([^?\s]*)?$/i;
     const isMatch = regex.test(answer);
-    return isMatch ? answer : validateInput();
+    if (!isMatch) {
+        console.log("Oops! Your input appears invalid. Only images with file-ending " +
+            "jpg, png, gig, avif, tiff, svg and webp are accepted. \n")
+        return getAndValidateInput();
+    }
+    return answer;
 }

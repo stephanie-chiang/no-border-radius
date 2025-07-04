@@ -20,16 +20,20 @@ async function getUserInput() {
   const answer = await resolveInput("Input the url of your image: ");
   return answer;
 }
-async function validateInput() {
+async function getAndValidateInput() {
   const answer = await getUserInput();
-  const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg|webp)(\?[^\s]*)?$/i;
+  const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg|webp)([^?\s]*)?$/i;
   const isMatch = regex.test(answer);
-  return isMatch ? answer : validateInput();
+  if (!isMatch) {
+    console.log("Oops! Your input appears invalid. Only images with file-ending " + "jpg, png, gig, avif, tiff, svg and webp are accepted. \n");
+    return getAndValidateInput();
+  }
+  return answer;
 }
 
 async function fetchImage(imageUrl) {
   const response = await fetch(imageUrl);
-  if (response.status != 200) {
+  if (response.status !== 200) {
     throw new Error(`Problem fetching image: ${error}`);
   }
   return response;
@@ -37,7 +41,7 @@ async function fetchImage(imageUrl) {
 
 function extractFileName(response) {
   const imageUrl = response.url;
-  const regex = /\/([\w\d]+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
+  const regex = /\/([\w\d\-_']+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
   const matches = imageUrl.match(regex);
   return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
 }
@@ -93,7 +97,7 @@ async function processImage(inputPath) {
 }
 
 console.log("Hello world");
-const imageUrl = await validateInput();
+const imageUrl = await getAndValidateInput();
 const fetchedImage = await fetchImage(imageUrl);
 const inputImagePath = await saveImage(fetchedImage);
 if (inputImagePath) {

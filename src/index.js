@@ -1,9 +1,9 @@
-import { validateInput } from './userInput';
+import { getAndValidateInput } from './userInput';
 import { fetchImage } from './fetchImage';
 import { saveImage, processImage } from './processImage';
 
 console.log("Hello world");
-const imageUrl = await validateInput();
+const imageUrl = await getAndValidateInput();
 
 const fetchedImage = await fetchImage(imageUrl);
 
