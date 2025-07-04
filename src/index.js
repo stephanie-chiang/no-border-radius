@@ -3,15 +3,21 @@ import { fetchImage } from './fetchImage';
 import { saveImage, processImage } from './processImage';
 
 console.log("Hello world");
-const imageUrl = await getAndValidateInput();
 
-const fetchedImage = await fetchImage(imageUrl);
+export async function main() {
+    const imageUrl = await getAndValidateInput();
 
-const inputImagePath = await saveImage(fetchedImage);
+    const fetchedImage = await fetchImage(imageUrl);
 
-if (inputImagePath) {
-    await processImage(inputImagePath);
+    const inputImagePath = await saveImage(fetchedImage);
+
+    if (inputImagePath) {
+        await processImage(inputImagePath);
+    }
+    else {
+        return main;
+    }
+
 }
-else {
-    console.log("No image data saved.");
-}
+
+main();

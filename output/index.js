@@ -45,6 +45,12 @@ function extractFileName(response) {
   const matches = imageUrl.match(regex);
   return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
 }
+function getFileExtension(response) {
+  const imageUrl = response.url;
+  const regex = /\/([\w\d\-_']+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
+  const matches = imageUrl.match(regex);
+  return matches && matches[2] ? matches[2] : console.error("No matches found", matches);
+}
 function buildOutputPath(inputPath, outputDirectoryPath) {
   const {
     name,
@@ -53,23 +59,37 @@ function buildOutputPath(inputPath, outputDirectoryPath) {
   console.log(path.parse(inputPath));
   return path.join(outputDirectoryPath, `${name}_resized${ext}`);
 }
+function isImage(fetchResponse) {
+  return fetchResponse.headers.get("Content-Type").startsWith("image");
+}
 
 dotenv.config();
 async function saveImage(fetchResponse) {
+  console.log(fetchResponse);
+  if (!isImage(fetchResponse)) {
+    console.log(`Incorrect content-type ${fetchResponse.headers.contentType} detected. Try another image. \n`);
+    return main();
+  }
   const arrayBuffer = await fetchResponse.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const fileType = await fileTypeFromBuffer(buffer);
+  console.log(`Filetype = ${fileType}`);
+  let fileExtension;
+  fileType ? fileExtension = fileType.ext : fileExtension = getFileExtension(fetchResponse);
+  console.log(`File extension = ${fileExtension}`);
+  if (!fileExtension) {
+    console.log(`No valid extension could be detected for ${fetchResponse.url}. The program will only accept valid images. \n`);
+    return main();
+  }
+  const imageName = extractFileName(fetchResponse);
+  const outputFileName = `${imageName}.${fileExtension}`;
+  const destinationFilePath = path.join(process.env.IMAGE_INPUT_PATH, outputFileName);
   try {
-    if (fileType.ext) {
-      const imageName = extractFileName(fetchResponse);
-      const outputFileName = `${imageName}.${fileType.ext}`;
-      const destinationFilePath = path.join(process.env.IMAGE_OUTPUT_PATH, outputFileName);
-      await fsPromises.writeFile(destinationFilePath, buffer);
-      console.log(`Success! Your ${fileType.ext} image is now copied to ${destinationFilePath}`);
-      return destinationFilePath;
-    }
+    await fsPromises.writeFile(destinationFilePath, buffer);
+    console.log(`Success! Your ${fileExtension} image is now copied to ${destinationFilePath}`);
+    return destinationFilePath;
   } catch (error) {
-    console.error("Error writing occurred", error.message);
+    console.error(`Error writing to ${error.path} occurred`, error.code, error.message);
   }
 }
 async function processImage(inputPath) {
@@ -84,24 +104,34 @@ async function processImage(inputPath) {
     width,
     height
   } = await image.metadata();
+  const borderRadius = 30;
+  const roundedCorners = Buffer.from(`<svg><rect x="0" y="0" width="${width / 2}" height="${height / 2}" rx="${borderRadius}" ry="${borderRadius}" fill="red"/></svg>`);
   image.resize(Math.round(width / 2), Math.round(height / 2), {
     fit: sharp.fit.contain
-  }).toFile(outputPath, (error, info) => {
+  }).composite([{
+    input: roundedCorners,
+    blend: "dest-in"
+  }]).toFile(outputPath, (error, info) => {
     if (error) {
       console.error(`Error processing image: ${error}`);
     } else {
       console.log(`Successfully processed. Image info = ${info.format}, 
-                width ${info.width}, heigh ${info.height}`);
+                    width ${info.width}, heigh ${info.height}`);
     }
   });
 }
 
 console.log("Hello world");
-const imageUrl = await getAndValidateInput();
-const fetchedImage = await fetchImage(imageUrl);
-const inputImagePath = await saveImage(fetchedImage);
-if (inputImagePath) {
-  await processImage(inputImagePath);
-} else {
-  console.log("No image data saved.");
+async function main() {
+  const imageUrl = await getAndValidateInput();
+  const fetchedImage = await fetchImage(imageUrl);
+  const inputImagePath = await saveImage(fetchedImage);
+  if (inputImagePath) {
+    await processImage(inputImagePath);
+  } else {
+    return main;
+  }
 }
+main();
+
+export { main };

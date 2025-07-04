@@ -7,8 +7,19 @@ export function extractFileName(response) {
     return matches && matches[1] ? matches[1] : console.error("No matches found", matches);
 }
 
+export function getFileExtension(response) {
+    const imageUrl = response.url;
+    const regex = /\/([\w\d\-_']+)\.(jpe?g|gif|png|avif|tiff|svg|webp)$/i;
+    const matches = imageUrl.match(regex)
+    return matches && matches[2] ? matches[2] : console.error("No matches found", matches);
+}
+
 export function buildOutputPath(inputPath, outputDirectoryPath) {
     const {name, ext} = path.parse(inputPath);
     console.log(path.parse(inputPath));
     return path.join(outputDirectoryPath, `${name}_resized${ext}`);
+}
+
+export function isImage(fetchResponse) {
+    return fetchResponse.headers.get("Content-Type").startsWith("image");
 }
