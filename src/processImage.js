@@ -5,8 +5,6 @@ import fsPromises from "fs/promises";
 import fs from "fs";
 import { fileTypeFromBuffer} from "file-type";
 import { extractFileName, getFileExtension, buildOutputPath, isImage} from "./processImageHelpers";
-import {getAndValidateInput} from "./userInput.js";
-import { main } from "./index";
 
 dotenv.config();
 
@@ -14,7 +12,7 @@ export async function saveImage(fetchResponse) {
     console.log(fetchResponse);
     if (!isImage(fetchResponse)) {
         console.log(`Incorrect content-type ${fetchResponse.headers.contentType} detected. Try another image. \n`);
-        return main();
+        return;
     }
     const arrayBuffer = await fetchResponse.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -28,7 +26,7 @@ export async function saveImage(fetchResponse) {
 
     if (!fileExtension) {
         console.log(`No valid extension could be detected for ${fetchResponse.url}. The program will only accept valid images. \n`);
-        return main();
+        return;
     }
 
     const imageName = extractFileName(fetchResponse);
@@ -41,6 +39,7 @@ export async function saveImage(fetchResponse) {
         return destinationFilePath;
     } catch (error) {
             console.error(`Error writing to ${error.path} occurred`, error.code, error.message);
+            return;
     }
 }
 
@@ -72,12 +71,18 @@ export async function processImage(inputPath) {
         .toFile(
             outputPath, (error, info) => {
                 if (error) {
-                    console.error(`Error processing image: ${error}`);
+                    console.error(`Error processing your image: ${error}. \n`);
+                    console.error(`Please try again. \n`);
                 }
                 else {
-                    console.log(`Successfully processed. Image info = ${info.format}, 
-                    width ${info.width}, heigh ${info.height}`);
+                    console.log(`Successfully processed. \n`)
+                    console.log(`Image info = ${info.format}, width ${info.width}, heigh ${info.height}`);
                 }
             }
         )
+    if (!fs.existsSync(outputPath)){
+        console.error(`Error: no input file at ${outputPath}`);
+        return;
+    }
+    return outputPath;
 }

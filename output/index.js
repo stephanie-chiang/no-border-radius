@@ -17,16 +17,15 @@ function resolveInput(urlPrompter) {
   });
 }
 async function getUserInput() {
-  const answer = await resolveInput("Input the url of your image: ");
-  return answer;
+  return await resolveInput("Input the url of your image: ");
 }
-async function getAndValidateInput() {
+async function getAndValidateUserInput() {
   const answer = await getUserInput();
   const regex = /^https?:\/\/[^\s?#]+\.(jpe?g|gif|png|avif|tiff|svg|webp)([^?\s]*)?$/i;
   const isMatch = regex.test(answer);
   if (!isMatch) {
     console.log("Oops! Your input appears invalid. Only images with file-ending " + "jpg, png, gig, avif, tiff, svg and webp are accepted. \n");
-    return getAndValidateInput();
+    return;
   }
   return answer;
 }
@@ -34,7 +33,8 @@ async function getAndValidateInput() {
 async function fetchImage(imageUrl) {
   const response = await fetch(imageUrl);
   if (response.status !== 200) {
-    throw new Error(`Problem fetching image: ${error}`);
+    console.log(`Error status: ${response.status}`);
+    return;
   }
   return response;
 }
@@ -68,7 +68,7 @@ async function saveImage(fetchResponse) {
   console.log(fetchResponse);
   if (!isImage(fetchResponse)) {
     console.log(`Incorrect content-type ${fetchResponse.headers.contentType} detected. Try another image. \n`);
-    return main();
+    return;
   }
   const arrayBuffer = await fetchResponse.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
@@ -79,7 +79,7 @@ async function saveImage(fetchResponse) {
   console.log(`File extension = ${fileExtension}`);
   if (!fileExtension) {
     console.log(`No valid extension could be detected for ${fetchResponse.url}. The program will only accept valid images. \n`);
-    return main();
+    return;
   }
   const imageName = extractFileName(fetchResponse);
   const outputFileName = `${imageName}.${fileExtension}`;
@@ -90,6 +90,7 @@ async function saveImage(fetchResponse) {
     return destinationFilePath;
   } catch (error) {
     console.error(`Error writing to ${error.path} occurred`, error.code, error.message);
+    return;
   }
 }
 async function processImage(inputPath) {
@@ -113,25 +114,47 @@ async function processImage(inputPath) {
     blend: "dest-in"
   }]).toFile(outputPath, (error, info) => {
     if (error) {
-      console.error(`Error processing image: ${error}`);
+      console.error(`Error processing your image: ${error}. \n`);
+      console.error(`Please try again. \n`);
     } else {
-      console.log(`Successfully processed. Image info = ${info.format}, 
-                    width ${info.width}, heigh ${info.height}`);
+      console.log(`Successfully processed. \n`);
+      console.log(`Image info = ${info.format}, width ${info.width}, heigh ${info.height}`);
     }
   });
+  if (!fs.existsSync(outputPath)) {
+    console.error(`Error: no input file at ${outputPath}`);
+    return;
+  }
+  return outputPath;
 }
 
 console.log("Hello world");
+console.log("This program runs as a loop. Hit CTRL+C or COMMAND+D to exit.");
 async function main() {
-  const imageUrl = await getAndValidateInput();
-  const fetchedImage = await fetchImage(imageUrl);
-  const inputImagePath = await saveImage(fetchedImage);
-  if (inputImagePath) {
-    await processImage(inputImagePath);
-  } else {
-    return main;
+  let run = true;
+  while (run) {
+    const imageUrl = await getAndValidateUserInput();
+    if (!imageUrl) {
+      console.log(`Problem fetching image at `);
+      continue;
+    }
+    const fetchResponse = await fetchImage(imageUrl);
+    if (!fetchResponse) {
+      console.log(`Just checking the fetch response is ${fetchResponse}`);
+      continue;
+    }
+    const inputImagePath = await saveImage(fetchResponse);
+    console.log(`Input path = ${inputImagePath}. if undefined, should break while loop...`);
+    if (!inputImagePath) {
+      continue;
+    }
+    const result = await processImage(inputImagePath);
+    console.log(`Result/output path = ${result}`);
+    if (!result) {
+      console.log(`checking if result goes here...`);
+      continue;
+    }
+    run = false;
   }
 }
 main();
-
-export { main };
