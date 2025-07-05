@@ -62,6 +62,28 @@ function buildOutputPath(inputPath, outputDirectoryPath) {
 function isImage(fetchResponse) {
   return fetchResponse.headers.get("Content-Type").startsWith("image");
 }
+async function transformImageWithSharp(inputPath, outputPath, borderRadius) {
+  const image = sharp(inputPath);
+  const {
+    width,
+    height
+  } = await image.metadata();
+  const roundedCorners = Buffer.from(`<svg><rect x="0" y="0" width="${width / 2}" height="${height / 2}" rx="${borderRadius}" ry="${borderRadius}" fill="red"/></svg>`);
+  image.resize(Math.round(width / 2), Math.round(height / 2), {
+    fit: sharp.fit.contain
+  }).composite([{
+    input: roundedCorners,
+    blend: "dest-in"
+  }]).toFile(outputPath, (error, info) => {
+    if (error) {
+      console.error(`Error processing your image: ${error}. \n`);
+      console.error(`Please try again. \n`);
+    } else {
+      console.log(`Successfully processed. \n`);
+      console.log(`Image info = ${info.format}, width ${info.width}, heigh ${info.height}`);
+    }
+  }).destroy();
+}
 
 dotenv.config();
 async function saveImage(fetchResponse) {
@@ -90,6 +112,10 @@ async function saveImage(fetchResponse) {
     return destinationFilePath;
   } catch (error) {
     console.error(`Error writing to ${error.path} occurred`, error.code, error.message);
+    if (fetchResponse?.body?.cancel) {
+      console.log(`Cancelling response body`);
+      await fetchResponse.body.cancel();
+    }
     return;
   }
 }
@@ -100,29 +126,9 @@ async function processImage(inputPath) {
   }
   const outputPath = buildOutputPath(inputPath, process.env.IMAGE_OUTPUT_PATH);
   console.log(`New output path is: ${outputPath}`);
-  const image = sharp(inputPath);
-  const {
-    width,
-    height
-  } = await image.metadata();
   const borderRadius = 30;
-  const roundedCorners = Buffer.from(`<svg><rect x="0" y="0" width="${width / 2}" height="${height / 2}" rx="${borderRadius}" ry="${borderRadius}" fill="red"/></svg>`);
-  image.resize(Math.round(width / 2), Math.round(height / 2), {
-    fit: sharp.fit.contain
-  }).composite([{
-    input: roundedCorners,
-    blend: "dest-in"
-  }]).toFile(outputPath, (error, info) => {
-    if (error) {
-      console.error(`Error processing your image: ${error}. \n`);
-      console.error(`Please try again. \n`);
-    } else {
-      console.log(`Successfully processed. \n`);
-      console.log(`Image info = ${info.format}, width ${info.width}, heigh ${info.height}`);
-    }
-  });
+  await transformImageWithSharp(inputPath, outputPath, borderRadius);
   if (!fs.existsSync(outputPath)) {
-    console.error(`Error: no input file at ${outputPath}`);
     return;
   }
   return outputPath;
@@ -132,7 +138,7 @@ console.log("Hello world");
 console.log("This program runs as a loop. Hit CTRL+C or COMMAND+D to exit.");
 async function main() {
   let run = true;
-  while (run) {
+  while (run === true) {
     const imageUrl = await getAndValidateUserInput();
     if (!imageUrl) {
       console.log(`Problem fetching image at `);

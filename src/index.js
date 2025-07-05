@@ -7,7 +7,8 @@ console.log("This program runs as a loop. Hit CTRL+C or COMMAND+D to exit.");
 
 async function main() {
     let run = true;
-    while (run) {
+
+    while (run === true) {
 
         const imageUrl = await getAndValidateUserInput();
 
