@@ -4,9 +4,13 @@ import * as path from "path";
 import fsPromises from "fs/promises";
 import fs from "fs";
 import { fileTypeFromBuffer} from "file-type";
-import { extractFileName, getFileExtension, buildOutputPath, isImage} from "./processImageHelpers";
-import {getAndValidateInput} from "./userInput.js";
-import { main } from "./index";
+import {
+    extractFileName,
+    getFileExtension,
+    buildOutputPath,
+    isImage,
+    transformImageWithSharp
+} from "./processImageHelpers";
 
 dotenv.config();
 
@@ -14,21 +18,19 @@ export async function saveImage(fetchResponse) {
     console.log(fetchResponse);
     if (!isImage(fetchResponse)) {
         console.log(`Incorrect content-type ${fetchResponse.headers.contentType} detected. Try another image. \n`);
-        return main();
+        return;
     }
     const arrayBuffer = await fetchResponse.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const fileType = await fileTypeFromBuffer(buffer);
-    console.log(`Filetype = ${fileType}`);
 
+    // Checking for file extension
+    const fileType = await fileTypeFromBuffer(buffer);
     let fileExtension;
     fileType ? fileExtension = fileType.ext : fileExtension = getFileExtension(fetchResponse);
 
-    console.log(`File extension = ${fileExtension}`);
-
     if (!fileExtension) {
         console.log(`No valid extension could be detected for ${fetchResponse.url}. The program will only accept valid images. \n`);
-        return main();
+        return;
     }
 
     const imageName = extractFileName(fetchResponse);
@@ -40,7 +42,12 @@ export async function saveImage(fetchResponse) {
         console.log(`Success! Your ${fileExtension} image is now copied to ${destinationFilePath}`);
         return destinationFilePath;
     } catch (error) {
-            console.error(`Error writing to ${error.path} occurred`, error.code, error.message);
+        console.error(`Error writing to ${error.path} occurred`, error.code, error.message);
+        if (fetchResponse?.body?.cancel) {
+            console.log(`Cancelling response body`);
+            await fetchResponse.body.cancel();
+        }
+        return;
     }
 }
 
@@ -53,31 +60,11 @@ export async function processImage(inputPath) {
     const outputPath = buildOutputPath(inputPath, process.env.IMAGE_OUTPUT_PATH);
     console.log(`New output path is: ${outputPath}`);
 
-    const image = sharp(inputPath);
-    const {width, height} = await image.metadata();
-
     const borderRadius = 30;
-    const roundedCorners = Buffer.from(
-        `<svg><rect x="0" y="0" width="${width/2}" height="${height/2}" rx="${borderRadius}" ry="${borderRadius}" fill="red"/></svg>`
-    )
+    await transformImageWithSharp(inputPath, outputPath, borderRadius);
 
-    image
-        .resize(Math.round(width/2), Math.round(height/2), {
-            fit: sharp.fit.contain,
-        })
-        .composite([{
-            input: roundedCorners,
-            blend: "dest-in"
-        }])
-        .toFile(
-            outputPath, (error, info) => {
-                if (error) {
-                    console.error(`Error processing image: ${error}`);
-                }
-                else {
-                    console.log(`Successfully processed. Image info = ${info.format}, 
-                    width ${info.width}, heigh ${info.height}`);
-                }
-            }
-        )
+    if (!fs.existsSync(outputPath)){
+        return;
+    }
+    return outputPath;
 }
