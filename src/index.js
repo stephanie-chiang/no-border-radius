@@ -3,7 +3,8 @@ import { fetchImage } from './fetchImage';
 import { saveImage, processImage } from './processImage';
 
 console.log("Hello world");
-console.log("This program runs as a loop. Hit CTRL+C or COMMAND+D to exit.");
+console.log("This application will create rounded borders for images that you specify from a web address. \n" +
+    "The image must be in a valid image format for this to work.");
 
 async function main() {
     let run = true;
