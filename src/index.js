@@ -13,29 +13,33 @@ async function main() {
         const imageUrl = await getAndValidateUserInput();
 
         if (!imageUrl) {
-            console.log(`Problem fetching image at `)
+            console.log(`Problem fetching your specified image. `)
             continue;
         }
 
         const fetchResponse = await fetchImage(imageUrl);
         if (!fetchResponse) {
-           console.log(`Just checking the fetch response is ${fetchResponse}`) ;
+           console.log(`Problem with fetch request.`) ;
            continue;
         }
 
+
         const inputImagePath = await saveImage(fetchResponse);
-        console.log(`Input path = ${inputImagePath}. if undefined, should break while loop...`);
+        console.log(`Problem fetching image.`);
 
         if (!inputImagePath) {
             continue;
         }
 
+
+
         const result = await processImage(inputImagePath);
         console.log(`Result/output path = ${result}`);
         if (!result) {
-            console.log(`checking if result goes here...`)
+            console.log(`Problem processing image.`)
             continue;
         }
+        console.log(`program ending...`)
         run = false;
     }
 

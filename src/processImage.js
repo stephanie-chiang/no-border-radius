@@ -22,13 +22,11 @@ export async function saveImage(fetchResponse) {
     }
     const arrayBuffer = await fetchResponse.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const fileType = await fileTypeFromBuffer(buffer);
-    console.log(`Filetype = ${fileType}`);
 
+    // Checking for file extension
+    const fileType = await fileTypeFromBuffer(buffer);
     let fileExtension;
     fileType ? fileExtension = fileType.ext : fileExtension = getFileExtension(fetchResponse);
-
-    console.log(`File extension = ${fileExtension}`);
 
     if (!fileExtension) {
         console.log(`No valid extension could be detected for ${fetchResponse.url}. The program will only accept valid images. \n`);
